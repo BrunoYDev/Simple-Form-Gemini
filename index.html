@@ -2,9 +2,10 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <link rel="manifest" href="manifest.json">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Checklist de Atendimento</title>
+    <!-- Link para o Manifesto do PWA -->
+    <link rel="manifest" href="manifest.json">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts -->
@@ -106,7 +107,6 @@
                         <br><br>
                         <strong>Excedentes:</strong> Declaro ter aprovado e recebido os serviços e materiais testados na minha presença conforme informações descritas neste relatório técnico, bem como a conformidade do serviço.
                     </p>
-                    <div><label for="rg" class="block text-sm font-medium text-gray-700 mb-1">R.G. do Segurado:</label><input type="text" id="rg" name="rg" required class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4" maxlength="12" placeholder="00.000.000-0" inputmode="numeric"></div>
                     <div id="signature-area-segurado" data-type="segurado" class="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-gray-50">
                         <img id="signature-preview-segurado" class="hidden h-20 mx-auto mb-2" alt="Pré-visualização da Assinatura do Segurado">
                         <span class="text-blue-600 font-medium">Clique aqui para assinar</span>
@@ -146,17 +146,7 @@
         const submitButton = document.getElementById('submit-button');
         const buttonSpinner = document.getElementById('button-spinner');
         const buttonText = document.getElementById('button-text');
-        const rgInput = document.getElementById('rg');
         const phoneInput = document.getElementById('telefone');
-
-        // Máscara para o campo RG
-        rgInput.addEventListener('input', (e) => {
-            let value = e.target.value.replace(/\D/g, '');
-            value = value.replace(/^(\d{2})(\d)/, '$1.$2');
-            value = value.replace(/\.(\d{3})(\d)/, '.$1.$2');
-            value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-            e.target.value = value.slice(0, 12);
-        });
 
         // Máscara para o campo Telefone
         phoneInput.addEventListener('input', (e) => {
@@ -256,6 +246,32 @@
             closeSignatureModal();
         });
 
+        // Função para adicionar a marca d'água repetida
+        const addWatermark = (pdf) => {
+            const pageW = pdf.internal.pageSize.getWidth();
+            const pageH = pdf.internal.pageSize.getHeight();
+            
+            const lastFont = pdf.getFont();
+            const lastColor = pdf.getTextColor();
+
+            pdf.setFontSize(60);
+            pdf.setTextColor(235, 235, 235); // Cinza bem claro
+            pdf.setFont('helvetica', 'bold');
+            
+            // Loop para criar um padrão de marca d'água
+            for (let y = 0; y < pageH; y += 100) {
+                for (let x = 0; x < pageW; x += 150) {
+                    pdf.text('MSERVIC', x, y, {
+                        angle: -45,
+                        align: 'left'
+                    });
+                }
+            }
+            
+            pdf.setFont(lastFont.fontName, lastFont.fontStyle);
+            pdf.setTextColor(lastColor);
+        };
+
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             if (!form.checkValidity()) {
@@ -274,6 +290,8 @@
                 const formData = new FormData(form);
                 const data = Object.fromEntries(formData.entries());
                 
+                addWatermark(doc);
+                
                 let y = 20;
                 const margin = 15;
                 const col1X = margin;
@@ -290,7 +308,11 @@
 
                 const addLine = (label, value) => {
                     if (!value) return; 
-                    if (y > 270) { doc.addPage(); y = 20; }
+                    if (y > 270) { 
+                        doc.addPage(); 
+                        addWatermark(doc);
+                        y = 20; 
+                    }
                     doc.setFontSize(10);
                     doc.setFont('helvetica', 'bold');
                     doc.text(`${label}:`, col1X, y);
@@ -316,8 +338,12 @@
                 addLine("Serviço Realizado", data.servico_realizado);
                 addLine("Observações", data.observacoes);
 
-                const addSignatureSection = (title, text, signatureImg, rg) => {
-                    if (y > 200) { doc.addPage(); y = 20; }
+                const addSignatureSection = (title, text, signatureImg) => {
+                    if (y > 200) { 
+                        doc.addPage(); 
+                        addWatermark(doc);
+                        y = 20; 
+                    }
                     y += 10;
                     doc.setFontSize(11);
                     doc.setFont('helvetica', 'bold');
@@ -329,25 +355,21 @@
                     doc.text(textLines, margin, y);
                     y += (textLines.length * 3) + 10;
 
-                    // Lógica de dimensionamento e posicionamento da assinatura
-                    const signatureWidth = pageW - (margin * 4); // Usa quase toda a largura com uma margem extra
-                    const signatureHeight = signatureWidth / 2.5; // Proporção para assinatura (ajustável)
-                    const signatureX = (pageW - signatureWidth) / 2; // Centraliza a imagem
+                    const signatureWidth = pageW - (margin * 4);
+                    const signatureHeight = signatureWidth / 2.5;
+                    const signatureX = (pageW - signatureWidth) / 2;
+
+                    // Adiciona a borda pontilhada
+                    doc.setLineDashPattern([1, 1], 0); // Define o padrão pontilhado
+                    doc.rect(signatureX, y, signatureWidth, signatureHeight); // Desenha o retângulo
+                    doc.setLineDashPattern([], 0); // Reseta o padrão da linha para sólido
 
                     doc.addImage(signatureImg, 'PNG', signatureX, y, signatureWidth, signatureHeight);
-                    y += signatureHeight + 5; // Move o cursor para baixo da imagem
-
-                    if (rg) {
-                         doc.setFontSize(10);
-                         doc.setFont('helvetica', 'normal');
-                         const rgText = `R.G. do Segurado: ${rg}`;
-                         doc.text(rgText, pageW / 2, y, { align: 'center' }); // Centraliza o RG
-                    }
-                    y += 10;
+                    y += signatureHeight + 10;
                 };
 
                 const combinedText = "Declaro ter aceito as informações acima descritas, autorizando previamente o prestador de serviços a executar reparos necessários, sob as condições expostas. Declaro também ter aprovado e recebido os serviços e materiais testados na minha presença conforme informações descritas neste relatório técnico, bem como a conformidade do serviço."
-                addSignatureSection("Assinatura do Segurado (Autorização e Conformidade)", combinedText, signatureData.segurado, data.rg);
+                addSignatureSection("Assinatura do Segurado (Autorização e Conformidade)", combinedText, signatureData.segurado);
 
                 const pdfFileName = `checklist-${data.assistencia || 'SN'}.pdf`;
                 const pdfFile = new File([doc.output('blob')], pdfFileName, { type: 'application/pdf' });
