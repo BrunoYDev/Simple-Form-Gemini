@@ -1,0 +1,23 @@
+{
+  "name": "Checklist Mservic",
+  "short_name": "Checklist",
+  "description": "Formulário de checklist para atendimentos de assistência Mservic.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f3f4f6",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "./mservic_forms.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./playstore.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
