@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <link rel="manifest" href="manifest.json">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Checklist de Atendimento</title>
     <!-- Tailwind CSS -->
@@ -80,7 +81,8 @@
                     <div><label for="assistencia" class="block text-sm font-medium text-gray-700 mb-1">Assistência nº</label><input type="text" id="assistencia" name="assistencia" class="w-full px-4 py-3 border border-gray-300 rounded-lg"></div>
                     <div><label for="seguradora" class="block text-sm font-medium text-gray-700 mb-1">Seguradora</label><input type="text" id="seguradora" name="seguradora" class="w-full px-4 py-3 border border-gray-300 rounded-lg"></div>
                     <div><label for="segurado" class="block text-sm font-medium text-gray-700 mb-1">Segurado</label><input type="text" id="segurado" name="segurado" required class="w-full px-4 py-3 border border-gray-300 rounded-lg"></div>
-                    <div><label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email do Segurado</label><input type="email" id="email" name="email" required placeholder="exemplo@email.com" class="w-full px-4 py-3 border border-gray-300 rounded-lg"></div>
+                    <div><label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email do Segurado (Opcional)</label><input type="email" id="email" name="email" placeholder="exemplo@email.com" class="w-full px-4 py-3 border border-gray-300 rounded-lg"></div>
+                    <div><label for="telefone" class="block text-sm font-medium text-gray-700 mb-1">Telefone do Segurado (Opcional)</label><input type="tel" id="telefone" name="telefone" placeholder="(XX) XXXXX-XXXX" class="w-full px-4 py-3 border border-gray-300 rounded-lg" maxlength="15" inputmode="tel"></div>
                     <div><label for="endereco" class="block text-sm font-medium text-gray-700 mb-1">Endereço</label><input type="text" id="endereco" name="endereco" required class="w-full px-4 py-3 border border-gray-300 rounded-lg"></div>
                     <div><label for="bairro" class="block text-sm font-medium text-gray-700 mb-1">Bairro</label><input type="text" id="bairro" name="bairro" required class="w-full px-4 py-3 border border-gray-300 rounded-lg"></div>
                     <div><label for="cidade" class="block text-sm font-medium text-gray-700 mb-1">Cidade</label><input type="text" id="cidade" name="cidade" required class="w-full px-4 py-3 border border-gray-300 rounded-lg"></div>
@@ -145,14 +147,23 @@
         const buttonSpinner = document.getElementById('button-spinner');
         const buttonText = document.getElementById('button-text');
         const rgInput = document.getElementById('rg');
+        const phoneInput = document.getElementById('telefone');
 
         // Máscara para o campo RG
         rgInput.addEventListener('input', (e) => {
-            let value = e.target.value.replace(/\D/g, ''); // Remove tudo que não é dígito
+            let value = e.target.value.replace(/\D/g, '');
             value = value.replace(/^(\d{2})(\d)/, '$1.$2');
             value = value.replace(/\.(\d{3})(\d)/, '.$1.$2');
             value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-            e.target.value = value.slice(0, 12); // Limita o tamanho
+            e.target.value = value.slice(0, 12);
+        });
+
+        // Máscara para o campo Telefone
+        phoneInput.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/\D/g, '');
+            value = value.replace(/^(\d{2})(\d)/g, '($1) $2');
+            value = value.replace(/(\d{5})(\d{4})$/, '$1-$2');
+            e.target.value = value.slice(0, 15);
         });
 
         // Modal de Assinatura
@@ -167,9 +178,7 @@
         let isDrawing = false, lastX = 0, lastY = 0;
 
         function resizeCanvas() {
-            if (signatureCanvas.offsetWidth === 0 || signatureCanvas.offsetHeight === 0) {
-                return;
-            }
+            if (signatureCanvas.offsetWidth === 0 || signatureCanvas.offsetHeight === 0) return;
             const ratio = Math.max(window.devicePixelRatio || 1, 1);
             signatureCanvas.width = signatureCanvas.offsetWidth * ratio;
             signatureCanvas.height = signatureCanvas.offsetHeight * ratio;
@@ -227,14 +236,10 @@
         }
         
         window.addEventListener('orientationchange', () => {
-            if (signatureModal.style.display === 'flex') {
-                setTimeout(resizeCanvas, 100);
-            }
+            if (signatureModal.style.display === 'flex') setTimeout(resizeCanvas, 100);
         });
         window.addEventListener('resize', () => {
-             if (signatureModal.style.display === 'flex') {
-                setTimeout(resizeCanvas, 100);
-            }
+             if (signatureModal.style.display === 'flex') setTimeout(resizeCanvas, 100);
         });
 
         document.getElementById('signature-area-segurado').addEventListener('click', () => openSignatureModal('segurado'));
@@ -284,12 +289,13 @@
                 y += 10;
 
                 const addLine = (label, value) => {
+                    if (!value) return; 
                     if (y > 270) { doc.addPage(); y = 20; }
                     doc.setFontSize(10);
                     doc.setFont('helvetica', 'bold');
                     doc.text(`${label}:`, col1X, y);
                     doc.setFont('helvetica', 'normal');
-                    const textLines = doc.splitTextToSize(value || '-', pageW - col2X - margin);
+                    const textLines = doc.splitTextToSize(value, pageW - col2X - margin);
                     doc.text(textLines, col2X, y);
                     y += (textLines.length * 5) + 4;
                 };
@@ -298,6 +304,7 @@
                 addLine("Seguradora", data.seguradora);
                 addLine("Segurado", data.segurado);
                 addLine("Email do Segurado", data.email);
+                addLine("Telefone do Segurado", data.telefone);
                 addLine("Endereço", `${data.endereco}, ${data.bairro}, ${data.cidade}`);
                 addLine("Data e Hora", new Date(data.data_chegada).toLocaleString('pt-BR'));
                 addLine("Serviço Solicitado", data.servico_solicitado);
@@ -321,13 +328,22 @@
                     const textLines = doc.splitTextToSize(text, pageW - (margin * 2));
                     doc.text(textLines, margin, y);
                     y += (textLines.length * 3) + 10;
-                    doc.addImage(signatureImg, 'PNG', margin, y, 60, 30);
+
+                    // Lógica de dimensionamento e posicionamento da assinatura
+                    const signatureWidth = pageW - (margin * 4); // Usa quase toda a largura com uma margem extra
+                    const signatureHeight = signatureWidth / 2.5; // Proporção para assinatura (ajustável)
+                    const signatureX = (pageW - signatureWidth) / 2; // Centraliza a imagem
+
+                    doc.addImage(signatureImg, 'PNG', signatureX, y, signatureWidth, signatureHeight);
+                    y += signatureHeight + 5; // Move o cursor para baixo da imagem
+
                     if (rg) {
                          doc.setFontSize(10);
                          doc.setFont('helvetica', 'normal');
-                         doc.text(`R.G. do Segurado: ${rg}`, margin + 70, y + 20);
+                         const rgText = `R.G. do Segurado: ${rg}`;
+                         doc.text(rgText, pageW / 2, y, { align: 'center' }); // Centraliza o RG
                     }
-                    y += 40;
+                    y += 10;
                 };
 
                 const combinedText = "Declaro ter aceito as informações acima descritas, autorizando previamente o prestador de serviços a executar reparos necessários, sob as condições expostas. Declaro também ter aprovado e recebido os serviços e materiais testados na minha presença conforme informações descritas neste relatório técnico, bem como a conformidade do serviço."
@@ -336,13 +352,9 @@
                 const pdfFileName = `checklist-${data.assistencia || 'SN'}.pdf`;
                 const pdfFile = new File([doc.output('blob')], pdfFileName, { type: 'application/pdf' });
 
-                // Lógica revisada para compartilhamento vs. download
                 if (navigator.share) {
                     try {
-                        await navigator.share({
-                            title: pdfFileName,
-                            files: [pdfFile],
-                        });
+                        await navigator.share({ title: pdfFileName, files: [pdfFile] });
                     } catch (error) {
                         if (error.name !== 'AbortError') {
                             console.error('Share API failed:', error);
@@ -364,6 +376,18 @@
             }
         });
     });
+
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+        .then(registration => {
+            console.log('Service Worker registrado com sucesso:', registration);
+        })
+        .catch(error => {
+            console.log('Falha ao registrar o Service Worker:', error);
+        });
+        });
+    }
     </script>
 </body>
 </html>
