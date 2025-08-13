@@ -134,10 +134,6 @@
     <!-- Modal de Assinatura -->
     <div id="signature-modal">
         <div id="portrait-message" class="flex-col items-center justify-center text-white text-center p-4">
-<<<<<<< HEAD
-=======
-            <!-- Ícone de rotação atualizado -->
->>>>>>> 3473b3e2aba203d9f34ac3b0ee1144226e7453a7
             <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M21 2v6h-6"/>
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
@@ -175,28 +171,46 @@
             e.target.value = value.slice(0, 15);
         });
 
-        // Lógica de Upload de Imagens
+        // --- Lógica de Upload de Imagens com Otimização ---
         const imageUploadInput = document.getElementById('image-upload');
         const imagePreviewContainer = document.getElementById('image-preview-container');
         let uploadedImages = [];
         const MAX_IMAGES = 5;
 
+        function getOptimizedImageDataUrl(file, callback) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    // Usa as dimensões naturais da imagem para o canvas
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    // Otimiza a imagem para JPEG com 70% de qualidade
+                    callback(canvas.toDataURL('image/jpeg', 0.7));
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
         imageUploadInput.addEventListener('change', (e) => {
-            const files = e.target.files;
+            const files = Array.from(e.target.files);
             if (uploadedImages.length + files.length > MAX_IMAGES) {
                 alert(`Você pode selecionar no máximo ${MAX_IMAGES} imagens.`);
+                e.target.value = '';
                 return;
             }
 
-            for (const file of files) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    const imageDataUrl = event.target.result;
+            files.forEach(file => {
+                getOptimizedImageDataUrl(file, (imageDataUrl) => {
                     uploadedImages.push(imageDataUrl);
                     renderImagePreviews();
-                };
-                reader.readAsDataURL(file);
-            }
+                });
+            });
+            e.target.value = '';
         });
 
         function renderImagePreviews() {
@@ -313,7 +327,6 @@
             closeSignatureModal();
         });
 
-        // Função para adicionar a marca d'água repetida
         const addWatermark = (pdf) => {
             const pageW = pdf.internal.pageSize.getWidth();
             const pageH = pdf.internal.pageSize.getHeight();
@@ -433,7 +446,6 @@
                 const combinedText = "Declaro ter aceito as informações acima descritas, autorizando previamente o prestador de serviços a executar reparos necessários, sob as condições expostas. Declaro também ter aprovado e recebido os serviços e materiais testados na minha presença conforme informações descritas neste relatório técnico, bem como a conformidade do serviço."
                 addSignatureSection("Assinatura do Segurado (Autorização e Conformidade)", combinedText, signatureData.segurado);
 
-                // Adicionar página de imagens, se houver
                 if (uploadedImages.length > 0) {
                     doc.addPage();
                     addWatermark(doc);
@@ -442,13 +454,12 @@
                     
                     doc.setFontSize(18);
                     doc.setFont('helvetica', 'bold');
-                    doc.text("Imagens da Assistencia", pageW / 2, imgY, { align: 'center' });
+                    doc.text("Imagens da Assistência", pageW / 2, imgY, { align: 'center' });
                     imgY += 15;
 
                     const contentWidth = pageW - (imgMargin * 2);
-                    const maxImgHeight = 80;
+                    const maxImgHeight = 120;
                     const gap = 5;
-                    let currentX = imgMargin;
 
                     for (const imgDataUrl of uploadedImages) {
                         const img = new Image();
@@ -456,9 +467,13 @@
                         await new Promise(resolve => img.onload = resolve);
                         
                         const aspectRatio = img.width / img.height;
-                        let imgWidth = contentWidth;
-                        let imgHeight = imgWidth / aspectRatio;
+                        let imgWidth = img.width;
+                        let imgHeight = img.height;
 
+                        if (imgWidth > contentWidth) {
+                            imgWidth = contentWidth;
+                            imgHeight = imgWidth / aspectRatio;
+                        }
                         if (imgHeight > maxImgHeight) {
                             imgHeight = maxImgHeight;
                             imgWidth = imgHeight * aspectRatio;
@@ -471,7 +486,7 @@
                         }
 
                         const centeredX = (pageW - imgWidth) / 2;
-                        doc.addImage(imgDataUrl, 'PNG', centeredX, imgY, imgWidth, imgHeight);
+                        doc.addImage(imgDataUrl, 'JPEG', centeredX, imgY, imgWidth, imgHeight);
                         imgY += imgHeight + gap;
                     }
                 }
