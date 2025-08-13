@@ -99,6 +99,18 @@
                     <div><label for="observacoes" class="block text-sm font-medium text-gray-700 mb-1">Observações</label><textarea id="observacoes" name="observacoes" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg"></textarea></div>
                 </div>
 
+                <!-- Seção de Upload de Imagens -->
+                <div class="pt-6 border-t">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-2">Imagens da Assistência (Opcional)</h2>
+                    <p class="text-sm text-gray-600 mb-4">Adicione até 5 imagens da galeria ou câmera.</p>
+                    <input type="file" id="image-upload" accept="image/*" multiple class="hidden">
+                    <label for="image-upload" class="w-full cursor-pointer bg-gray-100 text-gray-700 font-medium py-3 px-4 rounded-lg hover:bg-gray-200 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                        Selecionar Imagens
+                    </label>
+                    <div id="image-preview-container" class="mt-4 grid grid-cols-3 sm:grid-cols-5 gap-4"></div>
+                </div>
+
                 <!-- Assinatura Segurado -->
                 <div class="pt-6 border-t">
                     <h2 class="text-lg font-semibold text-gray-800 mb-2">Autorização e Conformidade do Segurado</h2>
@@ -122,7 +134,10 @@
     <!-- Modal de Assinatura -->
     <div id="signature-modal">
         <div id="portrait-message" class="flex-col items-center justify-center text-white text-center p-4">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 19v-5h-5M4 19h5v-5M20 4h-5v5"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 2v6h-6"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+            </svg>
             <h2 class="text-2xl font-bold">Por favor, vire o seu dispositivo</h2>
             <p class="mt-2">A assinatura funciona melhor no modo paisagem.</p>
         </div>
@@ -155,6 +170,54 @@
             value = value.replace(/(\d{5})(\d{4})$/, '$1-$2');
             e.target.value = value.slice(0, 15);
         });
+
+        // Lógica de Upload de Imagens
+        const imageUploadInput = document.getElementById('image-upload');
+        const imagePreviewContainer = document.getElementById('image-preview-container');
+        let uploadedImages = [];
+        const MAX_IMAGES = 5;
+
+        imageUploadInput.addEventListener('change', (e) => {
+            const files = e.target.files;
+            if (uploadedImages.length + files.length > MAX_IMAGES) {
+                alert(`Você pode selecionar no máximo ${MAX_IMAGES} imagens.`);
+                return;
+            }
+
+            for (const file of files) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const imageDataUrl = event.target.result;
+                    uploadedImages.push(imageDataUrl);
+                    renderImagePreviews();
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function renderImagePreviews() {
+            imagePreviewContainer.innerHTML = '';
+            uploadedImages.forEach((imageDataUrl, index) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'relative';
+                
+                const img = document.createElement('img');
+                img.src = imageDataUrl;
+                img.className = 'w-full h-24 object-cover rounded-lg';
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.innerHTML = '&times;';
+                removeBtn.className = 'absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center font-bold';
+                removeBtn.onclick = () => {
+                    uploadedImages.splice(index, 1);
+                    renderImagePreviews();
+                };
+                
+                wrapper.appendChild(img);
+                wrapper.appendChild(removeBtn);
+                imagePreviewContainer.appendChild(wrapper);
+            });
+        }
 
         // Modal de Assinatura
         const signatureModal = document.getElementById('signature-modal');
@@ -255,16 +318,12 @@
             const lastColor = pdf.getTextColor();
 
             pdf.setFontSize(60);
-            pdf.setTextColor(235, 235, 235); // Cinza bem claro
+            pdf.setTextColor(235, 235, 235);
             pdf.setFont('helvetica', 'bold');
             
-            // Loop para criar um padrão de marca d'água
             for (let y = 0; y < pageH; y += 100) {
                 for (let x = 0; x < pageW; x += 150) {
-                    pdf.text('MSERVIC', x, y, {
-                        angle: -45,
-                        align: 'left'
-                    });
+                    pdf.text('MSERVIC', x, y, { angle: -45, align: 'left' });
                 }
             }
             
@@ -359,10 +418,9 @@
                     const signatureHeight = signatureWidth / 2.5;
                     const signatureX = (pageW - signatureWidth) / 2;
 
-                    // Adiciona a borda pontilhada
-                    doc.setLineDashPattern([1, 1], 0); // Define o padrão pontilhado
-                    doc.rect(signatureX, y, signatureWidth, signatureHeight); // Desenha o retângulo
-                    doc.setLineDashPattern([], 0); // Reseta o padrão da linha para sólido
+                    doc.setLineDashPattern([1, 1], 0);
+                    doc.rect(signatureX, y, signatureWidth, signatureHeight);
+                    doc.setLineDashPattern([], 0);
 
                     doc.addImage(signatureImg, 'PNG', signatureX, y, signatureWidth, signatureHeight);
                     y += signatureHeight + 10;
@@ -370,6 +428,49 @@
 
                 const combinedText = "Declaro ter aceito as informações acima descritas, autorizando previamente o prestador de serviços a executar reparos necessários, sob as condições expostas. Declaro também ter aprovado e recebido os serviços e materiais testados na minha presença conforme informações descritas neste relatório técnico, bem como a conformidade do serviço."
                 addSignatureSection("Assinatura do Segurado (Autorização e Conformidade)", combinedText, signatureData.segurado);
+
+                // Adicionar página de imagens, se houver
+                if (uploadedImages.length > 0) {
+                    doc.addPage();
+                    addWatermark(doc);
+                    let imgY = 20;
+                    const imgMargin = 15;
+                    
+                    doc.setFontSize(18);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text("Imagens da Assistencia", pageW / 2, imgY, { align: 'center' });
+                    imgY += 15;
+
+                    const contentWidth = pageW - (imgMargin * 2);
+                    const maxImgHeight = 80;
+                    const gap = 5;
+                    let currentX = imgMargin;
+
+                    for (const imgDataUrl of uploadedImages) {
+                        const img = new Image();
+                        img.src = imgDataUrl;
+                        await new Promise(resolve => img.onload = resolve);
+                        
+                        const aspectRatio = img.width / img.height;
+                        let imgWidth = contentWidth;
+                        let imgHeight = imgWidth / aspectRatio;
+
+                        if (imgHeight > maxImgHeight) {
+                            imgHeight = maxImgHeight;
+                            imgWidth = imgHeight * aspectRatio;
+                        }
+                        
+                        if (imgY + imgHeight > doc.internal.pageSize.getHeight() - imgMargin) {
+                            doc.addPage();
+                            addWatermark(doc);
+                            imgY = 20;
+                        }
+
+                        const centeredX = (pageW - imgWidth) / 2;
+                        doc.addImage(imgDataUrl, 'PNG', centeredX, imgY, imgWidth, imgHeight);
+                        imgY += imgHeight + gap;
+                    }
+                }
 
                 const pdfFileName = `checklist-${data.assistencia || 'SN'}.pdf`;
                 const pdfFile = new File([doc.output('blob')], pdfFileName, { type: 'application/pdf' });
