@@ -183,12 +183,10 @@
                 const img = new Image();
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
-                    // Usa as dimensões naturais da imagem para o canvas
                     canvas.width = img.width;
                     canvas.height = img.height;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0);
-                    // Otimiza a imagem para JPEG com 70% de qualidade
                     callback(canvas.toDataURL('image/jpeg', 0.7));
                 };
                 img.src = e.target.result;
@@ -374,13 +372,25 @@
                 const col2X = 70;
                 const pageW = doc.internal.pageSize.getWidth();
 
-                doc.setFontSize(18);
+                // Título Principal
+                doc.setFontSize(22);
                 doc.setFont('helvetica', 'bold');
                 doc.text("Checklist de Atendimento", pageW / 2, y, { align: 'center' });
                 y += 10;
+
+                // Subtítulo com o Número da Assistência
+                if (data.assistencia) {
+                    doc.setFontSize(16);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(100, 100, 100); // Cor cinza para o subtítulo
+                    doc.text(`Assistência nº: ${data.assistencia}`, pageW / 2, y, { align: 'center' });
+                    y += 10;
+                }
+
                 doc.setLineWidth(0.5);
                 doc.line(margin, y, pageW - margin, y);
                 y += 10;
+                doc.setTextColor(0, 0, 0); // Reseta a cor do texto
 
                 const addLine = (label, value) => {
                     if (!value) return; 
@@ -398,7 +408,7 @@
                     y += (textLines.length * 5) + 4;
                 };
 
-                addLine("Assistência nº", data.assistencia);
+                // Adiciona os campos, exceto o de assistência que já foi usado no subtítulo
                 addLine("Seguradora", data.seguradora);
                 addLine("Segurado", data.segurado);
                 addLine("Email do Segurado", data.email);
