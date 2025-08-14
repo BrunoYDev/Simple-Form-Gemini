@@ -380,9 +380,9 @@
 
                 // Subtítulo com o Número da Assistência
                 if (data.assistencia) {
-                    doc.setFontSize(16);
-                    doc.setFont('helvetica', 'normal');
-                    doc.setTextColor(100, 100, 100); // Cor cinza para o subtítulo
+                    doc.setFontSize(18); // Aumentado
+                    doc.setFont('helvetica', 'bold'); // Negrito
+                    doc.setTextColor(0, 0, 0); // Preto
                     doc.text(`Assistência nº: ${data.assistencia}`, pageW / 2, y, { align: 'center' });
                     y += 10;
                 }
