@@ -360,7 +360,9 @@
             submitButton.disabled = true;
 
             try {
-                const doc = new jsPDF();
+                const doc = new jsPDF({
+                    compress: true
+                })
                 const formData = new FormData(form);
                 const data = Object.fromEntries(formData.entries());
                 
