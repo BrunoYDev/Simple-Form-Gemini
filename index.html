@@ -81,8 +81,8 @@
                 <div class="space-y-6">
                     <div><label for="assistencia" class="block text-sm font-medium text-gray-700 mb-1">Assistência nº</label><input type="text" id="assistencia" name="assistencia" class="w-full px-4 py-3 border border-gray-300 rounded-lg"></div>
                     <div><label for="seguradora" class="block text-sm font-medium text-gray-700 mb-1">Seguradora</label><input type="text" id="seguradora" name="seguradora" class="w-full px-4 py-3 border border-gray-300 rounded-lg"></div>
-                    <div><label for="segurado" class="block text-sm font-medium text-gray-700 mb-1">Segurado</label><input type="text" id="segurado" name="segurado" required class="w-full px-4 py-3 border border-gray-300 rounded-lg"></div>
-                    <div><label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email do Segurado (Opcional)</label><input type="email" id="email" name="email" placeholder="exemplo@email.com" class="w-full px-4 py-3 border border-gray-300 rounded-lg"></div>
+                    <div><label for="prestador" class="block text-sm font-medium text-gray-700 mb-1">Nome do Prestador</label><input type="text" id="prestador" name="prestador" required class="w-full px-4 py-3 border border-gray-300 rounded-lg"></div>
+                    <div><label for="segurado" class="block text-sm font-medium text-gray-700 mb-1">Nome do Segurado</label><input type="text" id="segurado" name="segurado" required class="w-full px-4 py-3 border border-gray-300 rounded-lg"></div>
                     <div><label for="telefone" class="block text-sm font-medium text-gray-700 mb-1">Telefone do Segurado (Opcional)</label><input type="tel" id="telefone" name="telefone" placeholder="(XX) XXXXX-XXXX" class="w-full px-4 py-3 border border-gray-300 rounded-lg" maxlength="15" inputmode="tel"></div>
                     <div><label for="endereco" class="block text-sm font-medium text-gray-700 mb-1">Endereço</label><input type="text" id="endereco" name="endereco" required class="w-full px-4 py-3 border border-gray-300 rounded-lg"></div>
                     <div><label for="bairro" class="block text-sm font-medium text-gray-700 mb-1">Bairro</label><input type="text" id="bairro" name="bairro" required class="w-full px-4 py-3 border border-gray-300 rounded-lg"></div>
@@ -102,7 +102,7 @@
                 <!-- Seção de Upload de Imagens -->
                 <div class="pt-6 border-t">
                     <h2 class="text-lg font-semibold text-gray-800 mb-2">Imagens da Assistência (Opcional)</h2>
-                    <p class="text-sm text-gray-600 mb-4">Adicione até 5 imagens da galeria ou câmera.</p>
+                    <p class="text-sm text-gray-600 mb-4">Adicione até 10 imagens da galeria ou câmera.</p>
                     <input type="file" id="image-upload" accept="image/*" multiple class="hidden">
                     <label for="image-upload" class="w-full cursor-pointer bg-gray-100 text-gray-700 font-medium py-3 px-4 rounded-lg hover:bg-gray-200 flex items-center justify-center">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
@@ -175,7 +175,7 @@
         const imageUploadInput = document.getElementById('image-upload');
         const imagePreviewContainer = document.getElementById('image-preview-container');
         let uploadedImages = [];
-        const MAX_IMAGES = 5;
+        const MAX_IMAGES = 10;
 
         function getOptimizedImageDataUrl(file, callback) {
             const reader = new FileReader();
@@ -187,7 +187,7 @@
                     canvas.height = img.height;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0);
-                    callback(canvas.toDataURL('image/jpeg', 0.7));
+                    callback(canvas.toDataURL('image/jpeg', 0.2)); // Compressão super agressiva
                 };
                 img.src = e.target.result;
             };
@@ -410,8 +410,8 @@
 
                 // Adiciona os campos, exceto o de assistência que já foi usado no subtítulo
                 addLine("Seguradora", data.seguradora);
-                addLine("Segurado", data.segurado);
-                addLine("Email do Segurado", data.email);
+                addLine("Nome do Prestador", data.prestador);
+                addLine("Nome do Segurado", data.segurado);
                 addLine("Telefone do Segurado", data.telefone);
                 addLine("Endereço", `${data.endereco}, ${data.bairro}, ${data.cidade}`);
                 addLine("Data e Hora", new Date(data.data_chegada).toLocaleString('pt-BR'));
@@ -501,7 +501,8 @@
                     }
                 }
 
-                const pdfFileName = `checklist-${data.assistencia || 'SN'}.pdf`;
+                const assistanceNumber = (data.assistencia || 'SN').replace(/\//g, '-');
+                const pdfFileName = `checklist-${assistanceNumber}.pdf`;
                 const pdfFile = new File([doc.output('blob')], pdfFileName, { type: 'application/pdf' });
 
                 if (navigator.share) {
